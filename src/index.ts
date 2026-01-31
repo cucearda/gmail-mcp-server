@@ -9,6 +9,7 @@ import {
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
 import { searchMailsToolSchema, handleSearchMails } from './tools/search-mails.js';
+import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 
 // Initialize Gmail client
 let gmailClient: ReturnType<typeof google.gmail> | null = null;
@@ -37,7 +38,7 @@ const server = new Server(
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [searchMailsToolSchema],
+    tools: [searchMailsToolSchema, listUnsubscribeLinksToolSchema],
   };
 });
 
@@ -49,6 +50,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const gmail = await getGmailClient();
     return handleSearchMails(
       args as { label: string },
+      gmail
+    );
+  }
+
+  if (name === 'list_unsubscribe_links_tool') {
+    const gmail = await getGmailClient();
+    return handleListUnsubscribeLinks(
+      args as { query: string; maxResults?: number },
       gmail
     );
   }

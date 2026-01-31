@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "watch": "tsc --watch",
     "dev": "tsx src/index.ts",
     "inspector": "npx @modelcontextprotocol/inspector node dist/index.js",
     "inspector:dev": "npx @modelcontextprotocol/inspector npx tsx src/index.ts",

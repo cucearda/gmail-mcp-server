@@ -4,6 +4,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError, } f
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
 import { searchMailsToolSchema, handleSearchMails } from './tools/search-mails.js';
+import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 // Initialize Gmail client
 let gmailClient = null;
 async function getGmailClient() {
@@ -25,7 +26,7 @@ const server = new Server({
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-        tools: [searchMailsToolSchema],
+        tools: [searchMailsToolSchema, listUnsubscribeLinksToolSchema],
     };
 });
 // Handle tool calls
@@ -34,6 +35,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === 'search_mails_tool') {
         const gmail = await getGmailClient();
         return handleSearchMails(args, gmail);
+    }
+    if (name === 'list_unsubscribe_links_tool') {
+        const gmail = await getGmailClient();
+        return handleListUnsubscribeLinks(args, gmail);
     }
     throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
 });

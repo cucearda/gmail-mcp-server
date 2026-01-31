@@ -1,4 +1,5 @@
 import { ErrorCode, McpError, } from '@modelcontextprotocol/sdk/types.js';
+import { extractHeaders, getHeader } from '../utility.js';
 // Tool schema definition
 export const searchMailsToolSchema = {
     name: 'search_mails_tool',
@@ -34,30 +35,47 @@ export async function handleSearchMails(args, gmailClient) {
                 });
                 // Extract headers - handle both simple and multipart messages
                 const payload = fullMessage.data.payload;
-                let headers = [];
-                if (payload?.headers) {
-                    headers = payload.headers;
+                const headers = extractHeaders(payload);
+                // Extract raw body - handle both simple and multipart messages
+                let rawBody = '';
+                if (payload?.body?.data) {
+                    // Simple message
+                    rawBody = Buffer.from(payload.body.data, 'base64').toString('utf-8');
                 }
                 else if (payload?.parts) {
-                    // For multipart messages, get headers from the first part
-                    const firstPart = payload.parts.find((p) => p.headers);
-                    if (firstPart?.headers) {
-                        headers = firstPart.headers;
-                    }
+                    // Multipart message - extract body from text/plain or text/html parts
+                    const extractBodyFromPart = (part) => {
+                        if (part.body?.data) {
+                            return Buffer.from(part.body.data, 'base64').toString('utf-8');
+                        }
+                        if (part.parts) {
+                            // Recursively check nested parts
+                            for (const subPart of part.parts) {
+                                const body = extractBodyFromPart(subPart);
+                                if (body)
+                                    return body;
+                            }
+                        }
+                        return '';
+                    };
+                    // Try to find text/plain first, then text/html
+                    const textPart = payload.parts.find((p) => p.mimeType === 'text/plain' || p.mimeType === 'text/html') || payload.parts[0];
+                    rawBody = extractBodyFromPart(textPart);
                 }
-                const getHeader = (name) => headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
-                    ?.value || '';
                 const snippet = fullMessage.data.snippet || '';
                 const labels = fullMessage.data.labelIds || [];
                 return {
                     id: message.id,
                     threadId: fullMessage.data.threadId,
-                    subject: getHeader('Subject'),
-                    from: getHeader('From'),
-                    to: getHeader('To'),
-                    date: getHeader('Date'),
+                    subject: getHeader(headers, 'Subject'),
+                    from: getHeader(headers, 'From'),
+                    to: getHeader(headers, 'To'),
+                    date: getHeader(headers, 'Date'),
+                    body: getHeader(headers, 'Body'),
                     snippet: snippet.substring(0, 200), // Limit snippet length
                     labels: labels,
+                    headersRaw: headers,
+                    bodyRaw: rawBody,
                 };
             }
             catch (error) {
