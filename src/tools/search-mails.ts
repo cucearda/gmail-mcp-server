@@ -8,51 +8,30 @@ import { google } from 'googleapis';
 export const searchMailsToolSchema = {
   name: 'search_mails_tool',
   description:
-    'Search for emails in Gmail. Supports optional query string and label filtering.',
+    'Search for emails in Gmail by label.',
   inputSchema: {
     type: 'object',
     properties: {
-      query: {
-        type: 'string',
-        description:
-          'Optional Gmail search query string (e.g., "from:example@gmail.com", "subject:meeting", "has:attachment"). See Gmail search operators for more options.',
-      },
       label: {
         type: 'string',
         description:
-          'Optional label name to filter emails (e.g., "INBOX", "SENT", "UNREAD", "PROMOTIONS", or custom label name).',
+          'Label name to filter emails (e.g., "INBOX", "SENT", "UNREAD", "PROMOTIONS", or custom label name).',
       },
     },
+    required: ['label'],
   },
 };
 
 // Tool handler implementation
 export async function handleSearchMails(
-  args: { query?: string; label?: string },
+  args: { label: string },
   gmailClient: ReturnType<typeof google.gmail>
 ) {
   try {
-    const query = args?.query;
-    const label = args?.label;
-
-    // Build the search query
-    let searchQuery = '';
-    if (query) {
-      searchQuery = query;
-    }
-    if (label) {
-      // If both query and label are provided, combine them
-      if (searchQuery) {
-        searchQuery = `label:${label} ${searchQuery}`;
-      } else {
-        searchQuery = `label:${label}`;
-      }
-    }
-
     // Search for messages
     const response = await gmailClient.users.messages.list({
       userId: 'me',
-      q: searchQuery || undefined,
+      q: `label:${args.label}`,
       maxResults: 50, // Limit to 50 results
     });
 

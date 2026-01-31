@@ -48,7 +48,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (name === 'search_mails_tool') {
     const gmail = await getGmailClient();
     return handleSearchMails(
-      args as { query?: string; label?: string },
+      args as { label: string },
       gmail
     );
   }
@@ -61,9 +61,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Start the server
 async function main() {
+  // Initialize Gmail client on startup
+  console.log('Initializing Gmail client...');
+  await getGmailClient();
+  console.log('Gmail client initialized successfully');
+  
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Gmail MCP server running on stdio');
+  console.log('Gmail MCP server running on stdio');
 }
 
 main().catch((error) => {
