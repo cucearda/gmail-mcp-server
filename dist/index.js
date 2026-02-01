@@ -4,7 +4,9 @@ import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError, } f
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
 import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
+import { searchMailsbyQueryToolSchema, handleSearchMailsbyQuery } from './tools/search-mails-query.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
+import { unsubscribeFromLinkToolSchema, handleUnsubscribeFromLink } from './tools/unsubscribe-from-link.js';
 // Initialize Gmail client
 let gmailClient = null;
 async function getGmailClient() {
@@ -26,7 +28,7 @@ const server = new Server({
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-        tools: [searchMailsbyLabelToolSchema, listUnsubscribeLinksToolSchema],
+        tools: [searchMailsbyLabelToolSchema, searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
     };
 });
 // Handle tool calls
@@ -36,9 +38,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const gmail = await getGmailClient();
         return handleSearchMailsbyLabel(args, gmail);
     }
+    if (name === 'search_mails_by_query_tool') {
+        const gmail = await getGmailClient();
+        return handleSearchMailsbyQuery(args, gmail);
+    }
     if (name === 'list_unsubscribe_links_tool') {
         const gmail = await getGmailClient();
         return handleListUnsubscribeLinks(args, gmail);
+    }
+    if (name === 'unsubscribe_from_list_unsubscribe_header') {
+        const gmail = await getGmailClient();
+        return handleUnsubscribeFromLink(args, gmail);
     }
     throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
 });

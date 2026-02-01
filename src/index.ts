@@ -9,7 +9,9 @@ import {
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
 import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
+import { searchMailsbyQueryToolSchema, handleSearchMailsbyQuery } from './tools/search-mails-query.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
+import { unsubscribeFromLinkToolSchema, handleUnsubscribeFromLink } from './tools/unsubscribe-from-link.js';
 
 // Initialize Gmail client
 let gmailClient: ReturnType<typeof google.gmail> | null = null;
@@ -38,7 +40,7 @@ const server = new Server(
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [searchMailsbyLabelToolSchema, listUnsubscribeLinksToolSchema],
+    tools: [searchMailsbyLabelToolSchema, searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
   };
 });
 
@@ -54,10 +56,26 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     );
   }
 
+  if (name === 'search_mails_by_query_tool') {
+    const gmail = await getGmailClient();
+    return handleSearchMailsbyQuery(
+      args as { query: string },
+      gmail
+    );
+  }
+
   if (name === 'list_unsubscribe_links_tool') {
     const gmail = await getGmailClient();
     return handleListUnsubscribeLinks(
       args as { query: string; maxResults?: number; pageToken?: string },
+      gmail
+    );
+  }
+
+  if (name === 'unsubscribe_from_list_unsubscribe_header') {
+    const gmail = await getGmailClient();
+    return handleUnsubscribeFromLink(
+      args as { listUnsubscribeHeader: string; debug?: boolean; timeout?: number },
       gmail
     );
   }

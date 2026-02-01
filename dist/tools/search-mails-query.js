@@ -1,27 +1,27 @@
 import { ErrorCode, McpError, } from '@modelcontextprotocol/sdk/types.js';
 import { extractHeaders, getHeader } from '../utility.js';
 // Tool schema definition
-export const searchMailsbyLabelToolSchema = {
-    name: 'search_mails_tool',
-    description: 'Search for emails in Gmail by label.',
+export const searchMailsbyQueryToolSchema = {
+    name: 'search_mails_by_query_tool',
+    description: 'Search for emails in Gmail by query.',
     inputSchema: {
         type: 'object',
         properties: {
-            label: {
+            query: {
                 type: 'string',
                 description: 'Gmail search query (e.g., "from:example.com", "subject:newsletter", or any Gmail search syntax).',
             },
         },
-        required: ['label'],
+        required: ['query'],
     },
 };
 // Tool handler implementation
-export async function handleSearchMailsbyLabel(args, gmailClient) {
+export async function handleSearchMailsbyQuery(args, gmailClient) {
     try {
         // Search for messages
         const response = await gmailClient.users.messages.list({
             userId: 'me',
-            q: `label:${args.label}`,
+            q: args.query,
             maxResults: 50, // Limit to 50 results
         });
         const messages = response.data.messages || [];

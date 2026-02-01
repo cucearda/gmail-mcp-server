@@ -3,7 +3,10 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createServer } from 'http';
 import { URL } from 'url';
 import open from 'open';
-const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly'];
+const SCOPES = [
+    'https://www.googleapis.com/auth/gmail.readonly',
+    'https://www.googleapis.com/auth/gmail.send',
+];
 const TOKEN_PATH = 'gmail-token.json';
 const CREDENTIALS_PATH = 'gcp-oauth-keys.json';
 // Load OAuth credentials
