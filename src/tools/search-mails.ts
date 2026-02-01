@@ -6,7 +6,7 @@ import { google } from 'googleapis';
 import { extractHeaders, getHeader } from '../utility.js';
 
 // Tool schema definition
-export const searchMailsToolSchema = {
+export const searchMailsbyLabelToolSchema = {
   name: 'search_mails_tool',
   description:
     'Search for emails in Gmail by label.',
@@ -24,7 +24,7 @@ export const searchMailsToolSchema = {
 };
 
 // Tool handler implementation
-export async function handleSearchMails(
+export async function handleSearchMailsbyLabel(
   args: { label: string },
   gmailClient: ReturnType<typeof google.gmail>
 ) {

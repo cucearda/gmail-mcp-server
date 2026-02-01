@@ -15,6 +15,10 @@ export const listUnsubscribeLinksToolSchema = {
                 type: 'number',
                 description: 'Maximum number of results to return (default: 50).',
             },
+            pageToken: {
+                type: 'string',
+                description: 'Page token to retrieve the next page of results. Use the nextPageToken from the previous response to get older emails.',
+            },
         },
         required: ['query'],
     },
@@ -27,6 +31,7 @@ export async function handleListUnsubscribeLinks(args, gmailClient) {
             userId: 'me',
             q: args.query,
             maxResults: args.maxResults || 50,
+            pageToken: args.pageToken,
         });
         const messages = response.data.messages || [];
         // Fetch full message details for each message
@@ -64,6 +69,8 @@ export async function handleListUnsubscribeLinks(args, gmailClient) {
                     text: JSON.stringify({
                         count: unsubscribeList.length,
                         unsubscribeLinks: unsubscribeList,
+                        nextPageToken: response.data.nextPageToken || null,
+                        hasMore: !!response.data.nextPageToken,
                     }, null, 2),
                 },
             ],

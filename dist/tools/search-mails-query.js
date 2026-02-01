@@ -9,7 +9,7 @@ export const searchMailsbyLabelToolSchema = {
         properties: {
             label: {
                 type: 'string',
-                description: 'Label name to filter emails (e.g., "INBOX", "SENT", "UNREAD", "PROMOTIONS", or custom label name).',
+                description: 'Gmail search query (e.g., "from:example.com", "subject:newsletter", or any Gmail search syntax).',
             },
         },
         required: ['label'],

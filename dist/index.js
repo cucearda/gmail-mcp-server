@@ -3,7 +3,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError, } from '@modelcontextprotocol/sdk/types.js';
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
-import { searchMailsToolSchema, handleSearchMails } from './tools/search-mails.js';
+import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 // Initialize Gmail client
 let gmailClient = null;
@@ -26,7 +26,7 @@ const server = new Server({
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-        tools: [searchMailsToolSchema, listUnsubscribeLinksToolSchema],
+        tools: [searchMailsbyLabelToolSchema, listUnsubscribeLinksToolSchema],
     };
 });
 // Handle tool calls
@@ -34,7 +34,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     if (name === 'search_mails_tool') {
         const gmail = await getGmailClient();
-        return handleSearchMails(args, gmail);
+        return handleSearchMailsbyLabel(args, gmail);
     }
     if (name === 'list_unsubscribe_links_tool') {
         const gmail = await getGmailClient();

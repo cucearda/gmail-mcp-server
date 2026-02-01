@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
-import { searchMailsToolSchema, handleSearchMails } from './tools/search-mails.js';
+import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 
 // Initialize Gmail client
@@ -38,7 +38,7 @@ const server = new Server(
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [searchMailsToolSchema, listUnsubscribeLinksToolSchema],
+    tools: [searchMailsbyLabelToolSchema, listUnsubscribeLinksToolSchema],
   };
 });
 
@@ -48,7 +48,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (name === 'search_mails_tool') {
     const gmail = await getGmailClient();
-    return handleSearchMails(
+    return handleSearchMailsbyLabel(
       args as { label: string },
       gmail
     );
@@ -57,7 +57,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   if (name === 'list_unsubscribe_links_tool') {
     const gmail = await getGmailClient();
     return handleListUnsubscribeLinks(
-      args as { query: string; maxResults?: number },
+      args as { query: string; maxResults?: number; pageToken?: string },
       gmail
     );
   }
