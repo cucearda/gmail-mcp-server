@@ -8,6 +8,11 @@ import { google } from 'googleapis';
 // Import MailComposer from nodemailer for proper MIME message construction
 // @ts-expect-error - MailComposer is a CommonJS module without TypeScript definitions
 import MailComposer from 'nodemailer/lib/mail-composer/index.js';
+// Import undici for custom HTTPS agent to handle self-signed certificates
+// Note: Node.js's built-in fetch doesn't expose certificate validation options,
+// so we use undici's fetch directly with a custom Agent that allows self-signed certs.
+// This is similar to how Postman allows self-signed certificates by default.
+import { Agent, fetch as undiciFetch } from 'undici';
 
 // ============================================================================
 // Constants
@@ -125,6 +130,7 @@ const JSON_INDENT = 2;
 const UNSUBSCRIBE_REQUEST_BODY = 'List-Unsubscribe=One-Click';
 const UNSUBSCRIBE_REQUEST_HEADERS = {
   'Content-Type': 'application/x-www-form-urlencoded',
+  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 };
 
 // ============================================================================
@@ -219,7 +225,7 @@ const UNSUBSCRIBE_SELECTORS = [
 
 // Text patterns to search for in buttons/links (case-insensitive)
 const UNSUBSCRIBE_TEXT_PATTERNS = [
-  /^unsubscribe$/i,
+  /\bunsubscribe\b/i,
   /^confirm unsubscribe$/i,
   /^unsubscribe me$/i,
   /^yes, unsubscribe$/i,
@@ -238,6 +244,8 @@ const SUCCESS_INDICATORS = [
   /you're unsubscribed/i,
   /unsubscribed successfully/i,
   /removed from mailing list/i,
+  /saved/i,
+  /unsubscribed/i,
 ];
 
 /**
@@ -518,16 +526,37 @@ async function handleHttpUnsubscribeWithPostRequest(
   url: string,
   timeout: number,
 ): Promise<boolean> {
+  // #region agent log
+  fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'unsubscribe-from-unsubscribe-header.ts:521',message:'handleHttpUnsubscribeWithPostRequest entry',data:{url,timeout},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  // Create a custom agent that allows self-signed certificates for HTTPS URLs
+  const urlObj = new URL(url);
+  const isHttps = urlObj.protocol === 'https:';
+  const agent = isHttps ? new Agent({
+    connect: {
+      rejectUnauthorized: false, // Allow self-signed certificates
+    },
+  }) : undefined;
+
   try {
-    const response = await fetch(url, {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'unsubscribe-from-unsubscribe-header.ts:530',message:'Before fetch call with custom agent',data:{url,isHttps,hasAgent:!!agent},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    const response = await undiciFetch(url, {
       method: 'POST',
       headers: UNSUBSCRIBE_REQUEST_HEADERS,
       body: UNSUBSCRIBE_REQUEST_BODY,
       signal: AbortSignal.timeout(timeout),
+      dispatcher: agent, // Use custom agent for HTTPS with self-signed certs
     });
 
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'unsubscribe-from-unsubscribe-header.ts:540',message:'Fetch succeeded',data:{status:response.status,statusText:response.statusText,ok:response.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     return response.ok;
-  } catch {
+  } catch (error) {  
+    console.error(`Error in handleHttpUnsubscribeWithPostRequest for ${url}:`, error);
     return false;
   }
 }
