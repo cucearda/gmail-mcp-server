@@ -9,7 +9,7 @@ export const listUnsubscribeLinksToolSchema = {
         properties: {
             query: {
                 type: 'string',
-                description: 'Gmail search query (e.g., "from:example.com", "subject:newsletter", or any Gmail search syntax).',
+                description: 'Gmail search query (e.g., "from:example.com", "subject:newsletter", "label:promotions", or any Gmail search syntax).',
             },
             maxResults: {
                 type: 'number',

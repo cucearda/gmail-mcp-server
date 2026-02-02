@@ -1,14 +1,20 @@
 import { google } from 'googleapis';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createServer } from 'http';
-import { URL } from 'url';
+import { URL, fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import open from 'open';
 const SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',
     'https://www.googleapis.com/auth/gmail.send',
 ];
-const TOKEN_PATH = 'gmail-token.json';
-const CREDENTIALS_PATH = 'gcp-oauth-keys.json';
+// Get the directory of the current file (works for both source and compiled)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Resolve paths relative to project root (go up from src/ or dist/)
+const projectRoot = join(__dirname, '..');
+const TOKEN_PATH = join(projectRoot, 'gmail-token.json');
+const CREDENTIALS_PATH = join(projectRoot, 'gcp-oauth-keys.json');
 // Load OAuth credentials
 const credentials = JSON.parse(readFileSync(CREDENTIALS_PATH, 'utf8'));
 // Support both 'web' and 'installed' OAuth credential formats

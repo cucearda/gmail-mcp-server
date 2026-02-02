@@ -96,7 +96,7 @@ const MSG_UNSUBSCRIBE_SUCCESSFUL_AFTER_CLICK = 'Unsubscribe successful after cli
 const MSG_UNSUBSCRIBE_SUCCESSFUL_FINAL = 'Unsubscribe successful (final check)';
 const MSG_WAITING_FOR_NEXT_STEP = (attempt: number) => `Attempt ${attempt}: Waiting for next step`;
 const MSG_BUTTON_NOT_FOUND = 'Could not find unsubscribe button using any heuristic';
-const MSG_ERROR_IN_HANDLE_HTTP = (error: string) => `Error in handleHttpUnsubscribe: ${error}`;
+const MSG_ERROR_IN_HANDLE_HTTP = (error: string) => `Error in handleHttpUnsubscribeWithPuppeteer: ${error}`;
 const MSG_BROWSER_CLOSE_FAILED = (error: string) => `Failed to close browser: ${error}`;
 const MSG_HTTP_UNSUBSCRIBE_FAILED = (url: string, error: string) => `Failed to unsubscribe from ${url}: ${error}`;
 const MSG_GMAIL_CLIENT_NOT_PROVIDED = 'Gmail client not provided, cannot send unsubscribe email';
@@ -121,6 +121,12 @@ const DEBUG_BROWSER_LAUNCH_FAILED = `[DEBUG] Failed to launch browser:`;
 // JSON formatting
 const JSON_INDENT = 2;
 
+// Request body for Unsubscribe requests
+const UNSUBSCRIBE_REQUEST_BODY = 'List-Unsubscribe=One-Click';
+const UNSUBSCRIBE_REQUEST_HEADERS = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+};
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -136,7 +142,9 @@ function waitForTimeout(ms: number): Promise<void> {
 export const unsubscribeFromLinkToolSchema = {
   name: 'unsubscribe_from_list_unsubscribe_header',
   description:
-    'Navigate to an unsubscribe URL and automatically click unsubscribe buttons using heuristic detection. If the List-Unsubscribe header only has mailto, send an email to the address in the header indicating that the user has unsubscribed.',
+    `Navigate to an unsubscribe URL and automatically click unsubscribe buttons using heuristic detection. If the List-Unsubscribe header only has mailto, send an email to the address in the header indicating that the user has unsubscribed
+    always use this tool in conjunction with the list_unsubscribe_links tool to find the List-Unsubscribe header and then use this tool to unsubscribe from the email.`,
+
   inputSchema: {
     type: 'object',
     properties: {
@@ -504,9 +512,32 @@ async function attemptUnsubscribe(
 }
 
 /**
- * Handles HTTP/HTTPS unsubscribe URLs using Puppeteer
+ * Handles HTTP/HTTPS unsubscribe URLs that follow RFC 8058 — One-Click Unsubscribe (modern)
  */
-async function handleHttpUnsubscribe(
+async function handleHttpUnsubscribeWithPostRequest(
+  url: string,
+  timeout: number,
+): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: UNSUBSCRIBE_REQUEST_HEADERS,
+      body: UNSUBSCRIBE_REQUEST_BODY,
+      signal: AbortSignal.timeout(timeout),
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+
+/**
+ * Handles HTTP/HTTPS unsubscribe URLs using Puppeteer
+ * This handles legacy unsubscribe links that follow the RFC 2369 format.
+ */
+async function handleHttpUnsubscribeWithPuppeteer(
   url: string,
   debug: boolean,
   timeout: number,
@@ -751,8 +782,22 @@ export async function handleUnsubscribeFromLink(
     // Handle HTTP/HTTPS URLs
     if (parsed.httpUrls.length > 0) {
       for (const url of parsed.httpUrls) {
+        // Try to unsubscribe with POST request
         try {
-          httpSuccess = await handleHttpUnsubscribe(url, debug, timeout, steps);
+          httpSuccess = await handleHttpUnsubscribeWithPostRequest(url, timeout);
+          if (httpSuccess) {
+            break; // Success on first URL
+          }
+        } catch (error) {
+          steps.push({
+            action: ACTION_HTTP_UNSUBSCRIBE,
+            status: STATUS_FAILED,
+            message: MSG_HTTP_UNSUBSCRIBE_FAILED(url, error instanceof Error ? error.message : String(error)),
+          });
+        }
+        // Try to unsubscribe with puppeteer
+        try {
+          httpSuccess = await handleHttpUnsubscribeWithPuppeteer(url, debug, timeout, steps);
           if (httpSuccess) {
             break; // Success on first URL
           }
@@ -767,7 +812,7 @@ export async function handleUnsubscribeFromLink(
     }
     
     // Handle mailto: addresses
-    if (parsed.mailtoAddresses.length > 0) {
+    if (parsed.mailtoAddresses.length > 0 && !httpSuccess) {
       if (!gmailClient) {
         steps.push({
           action: ACTION_MAILTO_UNSUBSCRIBE,
