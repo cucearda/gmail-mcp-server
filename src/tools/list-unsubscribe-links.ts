@@ -9,14 +9,34 @@ import { extractHeaders, getHeader } from '../utility.js';
 export const listUnsubscribeLinksToolSchema = {
   name: 'list_unsubscribe_links_tool',
   description:
-    'Search for emails in Gmail and return their List-Unsubscribe headers.',
+    'Search for emails in Gmail and return their List-Unsubscribe headers. Use this tool to find the List-Unsubscribe header of an email and then use the unsubscribe_from_list_unsubscribe_header tool to unsubscribe from the email.',
   inputSchema: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
         description:
-          'Gmail search query (e.g., "from:example.com", "subject:newsletter", "label:promotions", or any Gmail search syntax).',
+        `Gmail search query (e.g., "from:example.com", "subject:newsletter", "label:promotions", or any Gmail search syntax).
+        If you want to search for emails with a specific label, you can use the label:label_name syntax.
+        If you want to search for emails with a specific sender, you can use the from:sender_email syntax.
+        If you want to search for emails with a specific subject, you can use the subject:subject_text syntax.
+        If you want to search for emails with a specific date, you can use the date:date_range syntax.
+        If you want to search for emails with a specific body, you can use the body:body_text syntax.
+        If you want to search for emails with a specific attachment, you can use the has:attachment syntax.
+        If you want to search for emails with a specific sender, you can use the from:sender_email syntax.
+        If you want to search for emails with a specific subject, you can use the subject:subject_text syntax.
+        If you want to search for emails with a specific date, you can use the date:date_range syntax.
+
+        Commonly Used Examples:
+        - "from:example.com"
+        - "subject:newsletter"
+        - "label:promotions"
+        - "from:example.com"
+        - "subject:newsletter"
+        - "label:promotions"  => Important example, promotions often have
+        - "from:example.com"
+        - "subject:newsletter"
+        }`,
       },
       maxResults: {
         type: 'number',
