@@ -33,7 +33,7 @@ export const listUnsubscribeLinksToolSchema = {
         - "label:promotions"
         - "from:example.com"
         - "subject:newsletter"
-        - "label:promotions"  => Important example, promotions often have
+        - "label:promotions"
         - "from:example.com"
         - "subject:newsletter"
         }`,

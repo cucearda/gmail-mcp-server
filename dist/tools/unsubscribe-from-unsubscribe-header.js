@@ -3,6 +3,11 @@ import puppeteer from 'puppeteer';
 // Import MailComposer from nodemailer for proper MIME message construction
 // @ts-expect-error - MailComposer is a CommonJS module without TypeScript definitions
 import MailComposer from 'nodemailer/lib/mail-composer/index.js';
+// Import undici for custom HTTPS agent to handle self-signed certificates
+// Note: Node.js's built-in fetch doesn't expose certificate validation options,
+// so we use undici's fetch directly with a custom Agent that allows self-signed certs.
+// This is similar to how Postman allows self-signed certificates by default.
+import { Agent, fetch as undiciFetch } from 'undici';
 // ============================================================================
 // Constants
 // ============================================================================
@@ -102,6 +107,7 @@ const JSON_INDENT = 2;
 const UNSUBSCRIBE_REQUEST_BODY = 'List-Unsubscribe=One-Click';
 const UNSUBSCRIBE_REQUEST_HEADERS = {
     'Content-Type': 'application/x-www-form-urlencoded',
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
 };
 // ============================================================================
 // Helper Functions
@@ -115,7 +121,8 @@ function waitForTimeout(ms) {
 // Tool schema definition
 export const unsubscribeFromLinkToolSchema = {
     name: 'unsubscribe_from_list_unsubscribe_header',
-    description: 'Navigate to an unsubscribe URL and automatically click unsubscribe buttons using heuristic detection. If the List-Unsubscribe header only has mailto, send an email to the address in the header indicating that the user has unsubscribed.',
+    description: `Navigate to an unsubscribe URL and automatically click unsubscribe buttons using heuristic detection. If the List-Unsubscribe header only has mailto, send an email to the address in the header indicating that the user has unsubscribed
+    always use this tool in conjunction with the list_unsubscribe_links tool to find the List-Unsubscribe header and then use this tool to unsubscribe from the email.`,
     inputSchema: {
         type: 'object',
         properties: {
@@ -164,7 +171,7 @@ const UNSUBSCRIBE_SELECTORS = [
 ];
 // Text patterns to search for in buttons/links (case-insensitive)
 const UNSUBSCRIBE_TEXT_PATTERNS = [
-    /^unsubscribe$/i,
+    /\bunsubscribe\b/i,
     /^confirm unsubscribe$/i,
     /^unsubscribe me$/i,
     /^yes, unsubscribe$/i,
@@ -182,6 +189,8 @@ const SUCCESS_INDICATORS = [
     /you're unsubscribed/i,
     /unsubscribed successfully/i,
     /removed from mailing list/i,
+    /saved/i,
+    /unsubscribed/i,
 ];
 /**
  * Parses the List-Unsubscribe header to extract http/https URLs and mailto: addresses
@@ -433,16 +442,35 @@ async function attemptUnsubscribe(page, steps) {
  * Handles HTTP/HTTPS unsubscribe URLs that follow RFC 8058 — One-Click Unsubscribe (modern)
  */
 async function handleHttpUnsubscribeWithPostRequest(url, timeout) {
+    // #region agent log
+    fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'unsubscribe-from-unsubscribe-header.ts:521', message: 'handleHttpUnsubscribeWithPostRequest entry', data: { url, timeout }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'post-fix', hypothesisId: 'A' }) }).catch(() => { });
+    // #endregion
+    // Create a custom agent that allows self-signed certificates for HTTPS URLs
+    const urlObj = new URL(url);
+    const isHttps = urlObj.protocol === 'https:';
+    const agent = isHttps ? new Agent({
+        connect: {
+            rejectUnauthorized: false, // Allow self-signed certificates
+        },
+    }) : undefined;
     try {
-        const response = await fetch(url, {
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'unsubscribe-from-unsubscribe-header.ts:530', message: 'Before fetch call with custom agent', data: { url, isHttps, hasAgent: !!agent }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'post-fix', hypothesisId: 'B' }) }).catch(() => { });
+        // #endregion
+        const response = await undiciFetch(url, {
             method: 'POST',
             headers: UNSUBSCRIBE_REQUEST_HEADERS,
             body: UNSUBSCRIBE_REQUEST_BODY,
             signal: AbortSignal.timeout(timeout),
+            dispatcher: agent, // Use custom agent for HTTPS with self-signed certs
         });
+        // #region agent log
+        fetch('http://127.0.0.1:7245/ingest/dfe4e1ef-4932-4a98-ae10-635fd6d34150', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'unsubscribe-from-unsubscribe-header.ts:540', message: 'Fetch succeeded', data: { status: response.status, statusText: response.statusText, ok: response.ok }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'post-fix', hypothesisId: 'C' }) }).catch(() => { });
+        // #endregion
         return response.ok;
     }
-    catch {
+    catch (error) {
+        console.error(`Error in handleHttpUnsubscribeWithPostRequest for ${url}:`, error);
         return false;
     }
 }

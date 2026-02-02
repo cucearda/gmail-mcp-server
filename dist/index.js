@@ -5,7 +5,6 @@ import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js
 import { CallToolRequestSchema, ListToolsRequestSchema, ErrorCode, McpError, } from '@modelcontextprotocol/sdk/types.js';
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
-import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
 import { searchMailsbyQueryToolSchema, handleSearchMailsbyQuery } from './tools/search-mails-query.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 import { unsubscribeFromLinkToolSchema, handleUnsubscribeFromLink } from './tools/unsubscribe-from-unsubscribe-header.js';
@@ -30,16 +29,12 @@ const server = new Server({
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
-        tools: [searchMailsbyLabelToolSchema, searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
+        tools: [searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
     };
 });
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    if (name === 'search_mails_tool') {
-        const gmail = await getGmailClient();
-        return handleSearchMailsbyLabel(args, gmail);
-    }
     if (name === 'search_mails_by_query_tool') {
         const gmail = await getGmailClient();
         return handleSearchMailsbyQuery(args, gmail);

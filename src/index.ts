@@ -11,7 +11,6 @@ import {
 import type { Request, Response } from 'express';
 import { google } from 'googleapis';
 import { authenticate } from './auth.js';
-import { searchMailsbyLabelToolSchema, handleSearchMailsbyLabel } from './tools/search-mails.js';
 import { searchMailsbyQueryToolSchema, handleSearchMailsbyQuery } from './tools/search-mails-query.js';
 import { listUnsubscribeLinksToolSchema, handleListUnsubscribeLinks } from './tools/list-unsubscribe-links.js';
 import { unsubscribeFromLinkToolSchema, handleUnsubscribeFromLink } from './tools/unsubscribe-from-unsubscribe-header.js';
@@ -43,7 +42,7 @@ const server = new Server(
 // List available tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
-    tools: [searchMailsbyLabelToolSchema, searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
+    tools: [searchMailsbyQueryToolSchema, listUnsubscribeLinksToolSchema, unsubscribeFromLinkToolSchema],
   };
 });
 
@@ -51,18 +50,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
-  if (name === 'search_mails_tool') {
-    const gmail = await getGmailClient();
-    return handleSearchMailsbyLabel(
-      args as { label: string },
-      gmail
-    );
-  }
-
   if (name === 'search_mails_by_query_tool') {
     const gmail = await getGmailClient();
     return handleSearchMailsbyQuery(
-      args as { query: string },
+      args as { query: string, maxResults: number },
       gmail
     );
   }
